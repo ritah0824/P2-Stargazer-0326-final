@@ -1,0 +1,501 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: StarGazer API - Real-time star and celestial observation data
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: sky
+    description: Sky and celestial observation data
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /sky/visible-objects:
+    get:
+      operationId: getVisibleObjects
+      tags: [sky]
+      summary: Get currently visible celestial objects
+      description: Returns planets, stars, and other celestial objects visible right now based on location and time
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+            default: 40.7128
+          description: Observer latitude (defaults to New York)
+        - name: lon
+          in: query
+          required: false
+          schema:
+            type: number
+            default: -74.006
+          description: Observer longitude (defaults to New York)
+      responses:
+        "200":
+          description: List of visible celestial objects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisibleObjectsResponse"
+  /sky/conditions:
+    get:
+      operationId: getSkyConditions
+      tags: [sky]
+      summary: Get current sky observation conditions
+      description: Returns current sky quality, moon phase, and observing conditions
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+            default: 40.7128
+        - name: lon
+          in: query
+          required: false
+          schema:
+            type: number
+            default: -74.006
+      responses:
+        "200":
+          description: Sky conditions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkyConditions"
+  /sky/solar-system:
+    get:
+      operationId: getSolarSystemPositions
+      tags: [sky]
+      summary: Get current solar system planet positions
+      description: Returns the current altitude and azimuth of all major solar system objects
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+            default: 40.7128
+        - name: lon
+          in: query
+          required: false
+          schema:
+            type: number
+            default: -74.006
+      responses:
+        "200":
+          description: Solar system positions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolarSystemResponse"
+  /sky/weather:
+    get:
+      operationId: getSkyWeather
+      tags: [sky]
+      summary: Get weather and atmosphere data for observing
+      description: Returns current weather conditions and 24-hour forecasts from Open-Meteo (free, no key needed)
+      parameters:
+        - name: lat
+          in: query
+          required: false
+          schema:
+            type: number
+            default: 40.7128
+        - name: lon
+          in: query
+          required: false
+          schema:
+            type: number
+            default: -74.006
+      responses:
+        "200":
+          description: Weather data for sky observation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkyWeatherResponse"
+  /sky/events:
+    get:
+      operationId: getAstronomicalEvents
+      tags: [sky]
+      summary: Get upcoming astronomical events
+      description: Returns upcoming celestial events like meteor showers, eclipses, conjunctions
+      responses:
+        "200":
+          description: Upcoming astronomical events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AstronomicalEventsResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    CelestialObject:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the object
+        type:
+          type: string
+          enum: [planet, star, galaxy, nebula, cluster, constellation, moon, comet]
+        magnitude:
+          type: number
+          description: Apparent visual magnitude (lower = brighter)
+        altitude:
+          type: number
+          description: Altitude above horizon in degrees
+        azimuth:
+          type: number
+          description: Azimuth in degrees (0=N, 90=E, 180=S, 270=W)
+        constellation:
+          type: string
+          description: Host constellation
+        description:
+          type: string
+        isRising:
+          type: boolean
+          description: Whether the object is currently rising
+        riseTime:
+          type: string
+          nullable: true
+          description: ISO time string for rise time today
+        setTime:
+          type: string
+          nullable: true
+          description: ISO time string for set time today
+        transitTime:
+          type: string
+          nullable: true
+          description: ISO time string for transit (highest point) today
+        distanceAU:
+          type: number
+          nullable: true
+          description: Distance in astronomical units (for solar system objects)
+      required:
+        - name
+        - type
+        - magnitude
+        - altitude
+        - azimuth
+        - description
+        - isRising
+    VisibleObjectsResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          description: ISO timestamp of observation
+        lat:
+          type: number
+        lon:
+          type: number
+        objects:
+          type: array
+          items:
+            $ref: "#/components/schemas/CelestialObject"
+        totalVisible:
+          type: integer
+          description: Total number of objects above horizon
+      required:
+        - timestamp
+        - lat
+        - lon
+        - objects
+        - totalVisible
+    MoonPhase:
+      type: object
+      properties:
+        phase:
+          type: string
+          enum: [new, waxing_crescent, first_quarter, waxing_gibbous, full, waning_gibbous, last_quarter, waning_crescent]
+        illumination:
+          type: number
+          description: Percent illumination 0-100
+        age:
+          type: number
+          description: Moon age in days since new moon
+        riseTime:
+          type: string
+          nullable: true
+        setTime:
+          type: string
+          nullable: true
+        altitude:
+          type: number
+      required:
+        - phase
+        - illumination
+        - age
+        - altitude
+    SkyConditions:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        moonPhase:
+          $ref: "#/components/schemas/MoonPhase"
+        bortle:
+          type: integer
+          description: Bortle dark-sky scale 1-9 (1=darkest)
+        skyQuality:
+          type: string
+          enum: [excellent, good, fair, poor]
+        sunAltitude:
+          type: number
+          description: Sun altitude in degrees (negative means below horizon)
+        astronomicalTwilight:
+          type: boolean
+          description: True if it's astronomical twilight or darker
+        nauticalTwilight:
+          type: boolean
+        civilTwilight:
+          type: boolean
+        isNight:
+          type: boolean
+        siderealTime:
+          type: string
+          description: Current local sidereal time HH:MM:SS
+        julianDate:
+          type: number
+        nextSunrise:
+          type: string
+          nullable: true
+        nextSunset:
+          type: string
+          nullable: true
+      required:
+        - timestamp
+        - lat
+        - lon
+        - moonPhase
+        - bortle
+        - skyQuality
+        - sunAltitude
+        - astronomicalTwilight
+        - nauticalTwilight
+        - civilTwilight
+        - isNight
+        - siderealTime
+        - julianDate
+    PlanetPosition:
+      type: object
+      properties:
+        name:
+          type: string
+        symbol:
+          type: string
+        altitude:
+          type: number
+        azimuth:
+          type: number
+        magnitude:
+          type: number
+        angularDiameter:
+          type: number
+          description: Angular diameter in arcseconds
+        distanceAU:
+          type: number
+        isVisible:
+          type: boolean
+          description: Whether the planet is above horizon
+        constellation:
+          type: string
+        riseTime:
+          type: string
+          nullable: true
+        setTime:
+          type: string
+          nullable: true
+        transitTime:
+          type: string
+          nullable: true
+        phase:
+          type: number
+          nullable: true
+          description: Planet phase illumination percent (only inner planets)
+      required:
+        - name
+        - symbol
+        - altitude
+        - azimuth
+        - magnitude
+        - angularDiameter
+        - distanceAU
+        - isVisible
+        - constellation
+    SolarSystemResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        planets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanetPosition"
+        sun:
+          $ref: "#/components/schemas/PlanetPosition"
+        moon:
+          $ref: "#/components/schemas/PlanetPosition"
+      required:
+        - timestamp
+        - lat
+        - lon
+        - planets
+        - sun
+        - moon
+    AstronomicalEvent:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [meteor_shower, eclipse, conjunction, opposition, elongation, occultation, transit, solstice, equinox]
+        date:
+          type: string
+          description: ISO date string
+        description:
+          type: string
+        peakIntensity:
+          type: string
+          nullable: true
+          description: For meteor showers, the expected rate (e.g. "100/hr")
+        visibility:
+          type: string
+          enum: [global, northern_hemisphere, southern_hemisphere, limited]
+        magnitude:
+          type: number
+          nullable: true
+      required:
+        - name
+        - type
+        - date
+        - description
+        - visibility
+    HourlyForecastPoint:
+      type: object
+      properties:
+        time:
+          type: string
+          description: ISO time string
+        value:
+          type: number
+      required:
+        - time
+        - value
+    SkyWeatherResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        cloudCover:
+          type: number
+          description: Current cloud cover percentage 0-100
+        temperature:
+          type: number
+          description: Current temperature in Celsius
+        windSpeed:
+          type: number
+          description: Current wind speed in km/h
+        windDirection:
+          type: number
+          description: Wind direction in degrees
+        humidity:
+          type: number
+          description: Relative humidity percentage
+        dewPoint:
+          type: number
+          description: Dew point temperature in Celsius
+        visibility:
+          type: number
+          description: Visibility in km
+        aqi:
+          type: number
+          nullable: true
+          description: US Air Quality Index
+        aqiCategory:
+          type: string
+          nullable: true
+          description: AQI category label
+        skyScore:
+          type: number
+          description: Overall sky observing quality score 0-100
+        skyScoreLabel:
+          type: string
+          enum: [Excellent, Good, Fair, Poor, Terrible]
+        skyScoreMessage:
+          type: string
+          description: Short human-readable sky quality message
+        hourlyCloudCover:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyForecastPoint"
+          description: 24-hour cloud cover forecast
+        hourlyTemperature:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyForecastPoint"
+          description: 24-hour temperature forecast
+      required:
+        - timestamp
+        - lat
+        - lon
+        - cloudCover
+        - temperature
+        - windSpeed
+        - windDirection
+        - humidity
+        - dewPoint
+        - skyScore
+        - skyScoreLabel
+        - skyScoreMessage
+        - hourlyCloudCover
+        - hourlyTemperature
+    AstronomicalEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AstronomicalEvent"
+        generatedAt:
+          type: string
+      required:
+        - events
+        - generatedAt
